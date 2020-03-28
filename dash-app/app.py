@@ -34,7 +34,22 @@ def update_output(input1, input2):
     [Input("qemistreetask", "value")],
 )
 def process_qemistree(qemistree_task):
-    url = "https://gnps.ucsd.edu/ProteoSAFe/DownloadResultFile?task=8500452e56804441830a590f0a3d961b&file=output_folder/feature-table.qza&block=main"
+    url = "https://gnps.ucsd.edu/ProteoSAFe/DownloadResultFile?task=8fa3ab31a4e546539ae585e55d7c7139&file=output_folder/merged-feature-table.qza&block=main"
+    r = requests.get(url)
+
+    url = "https://gnps.ucsd.edu/ProteoSAFe/DownloadResultFile?task=8fa3ab31a4e546539ae585e55d7c7139&file=output_folder/qemistree-pruned-smiles.qza&block=main"
+    r = requests.get(url)
+
+    url = "https://gnps.ucsd.edu/ProteoSAFe/DownloadResultFile?task=8fa3ab31a4e546539ae585e55d7c7139&file=output_folder/classified-feature-data.qza&block=main"
+    r = requests.get(url)
+
+#     qiime qemistree plot \
+#   --i-grouped-table /path-to-grouped-feature-table.qza/ \
+#   --i-tree merged-qemistree-smiles.qza \
+#   --i-feature-metadata classified-merged-feature-data.qza \
+#   --p-category class \
+#   --o-visualization /path-to-qemistree-plot.qzv/
+
     return url
 
 if __name__ == "__main__":
