@@ -1,0 +1,34 @@
+version: '3'
+services:
+  qemistree-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.webserver
+    container_name: qemistree-web
+    ports:
+    - "6543:5000"
+    volumes:
+        - ./output:/output:rw
+    networks:
+      - default
+    restart: unless-stopped
+    command: /app/run_server.sh
+
+  qemistree-worker1:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: qemistree-worker1
+    volumes:
+        - ./output:/output:rw
+    networks:
+      - default
+    restart: unless-stopped
+    command: /app/run_worker.sh
+
+  qemistree-mqrabbit:
+    image: rabbitmq:latest
+    container_name: qemistree-mqrabbit
+    networks:
+      - default
+
