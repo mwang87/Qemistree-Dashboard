@@ -1,0 +1,13 @@
+version: '3'
+services:
+  qemistree-dash:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: qemistree-dash
+    ports:
+    - "6544:5000"
+    networks:
+      - default
+    restart: unless-stopped
+    command: /app/run_server.sh
