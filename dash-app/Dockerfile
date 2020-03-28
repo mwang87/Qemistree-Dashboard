@@ -1,20 +1,14 @@
-FROM ubuntu:18.04
-
+FROM continuumio/miniconda3:latest
 MAINTAINER Mingxun Wang "mwang87@gmail.com"
 
+WORKDIR /app
 RUN apt-get update -y
-RUN apt-get install -y python3-pip python3 build-essential
-
-RUN pip3 install ftputil
-RUN pip3 install flask
-RUN pip3 install gunicorn
-RUN pip3 install requests
-RUN pip3 install celery
-RUN pip3 install joblib
-RUN pip3 install vladiate
-RUN pip3 install pandas
-RUN pip3 install dash==1.9.1
-
+RUN conda install -c conda-forge dash
+RUN wget https://data.qiime2.org/distro/core/qiime2-2019.10-py36-linux-conda.yml
+RUN conda env create -n qiime2-2019.10-qemistree --file qiime2-2019.10-py36-linux-conda.yml
+RUN /bin/bash -c ". activate qiime2-2019.10-qemistree && \
+    pip install https://github.com/biocore/q2-qemistree/archive/2020.1.2.tar.gz"
 
 COPY . /app
 WORKDIR /app
+
