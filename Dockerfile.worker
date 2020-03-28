@@ -5,8 +5,10 @@ WORKDIR /app
 RUN apt-get update -y
 RUN conda install -c anaconda flask
 RUN conda install -c conda-forge celery
-RUN conda install -c qiime2 qiime2
-  
+RUN wget https://data.qiime2.org/distro/core/qiime2-2019.10-py36-linux-conda.yml
+RUN conda env create -n qiime2-2019.10-qemistree --file qiime2-2019.10-py36-linux-conda.yml
+RUN /bin/bash -c ". activate qiime2-2019.10-qemistree && \
+    pip install https://github.com/biocore/q2-qemistree/archive/2020.1.2.tar.gz"
 
 COPY . /app
 WORKDIR /app

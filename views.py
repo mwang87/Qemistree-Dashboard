@@ -16,8 +16,6 @@ import urllib
 from time import sleep
 import glob
 
-import util
-
 @app.route('/', methods=['GET'])
 def homepage():
     response = make_response(render_template('qemistree.html'))

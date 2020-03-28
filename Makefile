@@ -1,8 +1,8 @@
 build:
-	docker build -t ioda .
+	docker build -t qemistree .
 
 bash:
-	docker run -it -v $(PWD):/app --rm --name ioda ioda bash
+	docker run -it -v $(PWD):/app --rm --name qemistree qemistree bash
 
 server-compose-build-nocache:
 	docker-compose build --no-cache
