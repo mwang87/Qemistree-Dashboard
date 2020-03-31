@@ -164,7 +164,7 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
                 content_text = myzip.read(name)
                 soup = BeautifulSoup(content_text, 'html.parser')
                 itol_url = soup.h1.a.get("href")
-                itol_url.replace("http://", "https://")
+                itol_url = itol_url.replace("http://", "https://")
     
     qemistree_qzv_source_url = "https://qemistree.ucsd.edu/download/{}".format(qemistree_task)
     cors_url = "https://cors-anywhere.herokuapp.com/{}".format(qemistree_qzv_source_url)
