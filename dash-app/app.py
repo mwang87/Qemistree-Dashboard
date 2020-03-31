@@ -7,8 +7,7 @@ import q2_qemistree
 from q2_qemistree import prune_hierarchy
 from q2_qemistree import plot
 from qiime2 import Artifact
-from q2_types.feature_table import FeatureTable, Frequency
-from qiime2.plugins.feature_table.methods import group
+import os
 
 import pandas as pd
 from skbio import TreeNode
@@ -77,6 +76,8 @@ app.layout = html.Div(
                 ],
                 value='True'
            ),
+        html.Label('Sample metadata column to make barplots:'),
+        dcc.Input(id='group-samples-col', type='text', value='filename'),
         html.Div(id='plot-output')
     ]
 )
@@ -88,9 +89,13 @@ app.layout = html.Div(
     Input('prune-col', 'value'), 
     Input("plot-col", "value"), 
     Input("ms2-label", "value"),
-    Input("parent-mz", "value")],
+    Input("parent-mz", "value"),
+    Input("normalize-features", "value"),
+    Input("group-samples-col", "value")],
 )
-def process_qemistree(qemistree_task, prune_col, plot_col, ms2_label, parent_mz):
+def process_qemistree(qemistree_task, prune_col, plot_col, 
+                      ms2_label, parent_mz, normalize_features, 
+                      group_samples_col):
     url = 'https://gnps.ucsd.edu/ProteoSAFe/DownloadResultFile?task=' + qemistree_task
 
     # Metadata File
@@ -98,8 +103,6 @@ def process_qemistree(qemistree_task, prune_col, plot_col, ms2_label, parent_mz)
     ftable = requests.get(url +  '&file=metadata_table/&block=main')
     with open(output_filename, 'wb') as output_file:
         output_file.write(ftable.content)
-    metadata = pd.read_csv(output_filename, sep='\t', 
-                           index_col=0, dtype=str)
 
     # hashed feature table
     output_filename = './output/{}_merged-feature-table.qza'.format(qemistree_task)
@@ -107,7 +110,6 @@ def process_qemistree(qemistree_task, prune_col, plot_col, ms2_label, parent_mz)
     ftable = requests.get(url + table)
     with open(output_filename, 'wb') as qza:
         qza.write(ftable.content)
-    ftable = Artifact.load(output_filename).view(FeatureTable[Frequency])
 
     # full tree
     output_filename = './output/{}_qemistree.qza'.format(qemistree_task)
@@ -128,10 +130,13 @@ def process_qemistree(qemistree_task, prune_col, plot_col, ms2_label, parent_mz)
     pruned_tree = prune_hierarchy(fdata, tree, prune_col)
     ntips = len([tip for tip in pruned_tree.tips()])
 
-    grouped_table = group(table=ftable, axis='sample', metadata=None,
-                          mode='mean_ceiling')
-
-    plot(output_dir ='./output', tree = pruned_tree, 
+    os.system("qiime feature-table group --i-table ./output/grouped-merged-feature-table.qza "
+              "--p-axis 'sample' --m-metadata-file ./output/metadata.tsv "
+              "--m-metadata-column group_samples_col --p-mode mean-ceiling "
+              "--o-grouped-table ./output/grouped-merged-feature-table.qza")
+    
+    grouped_ftable = Artifact.load("./output/grouped-merged-feature-table.qza").view(pd.DataFrame)
+    plot(output_dir ='./output/visualization', tree = pruned_tree, 
          feature_metadata = fdata,
          category = plot_col, 
          ms2_label = ms2_label,
