@@ -5,6 +5,9 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 import q2_qemistree
 import os
+from zipfile import ZipFile
+from flask import Flask, send_from_directory
+from bs4 import BeautifulSoup
 
 import pandas as pd
 from skbio import TreeNode
@@ -13,7 +16,8 @@ import requests
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+server = Flask(__name__)
+app = dash.Dash(__name__, server=server, external_stylesheets=external_stylesheets)
 server = app.server
 
 
@@ -75,13 +79,14 @@ app.layout = html.Div(
            ),
         html.Label('Sample metadata column to make barplots:'),
         dcc.Input(id='group-samples-col', type='text', value='filename'),
-        html.Div(id='plot-output')
+        html.Div(id='plot-output'),
+        html.Div(id='plot-download')
     ]
 )
 
 # This function will rerun at any 
 @app.callback(
-    Output('plot-output', 'children'),
+    [Output('plot-output', 'children'), Output('plot-download', 'children')],
     [Input('qemistree-task', 'value'), 
     Input('prune-col', 'value'), 
     Input("plot-col", "value"), 
@@ -140,15 +145,33 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
     os.system(group_cmd)
     
     # qemistree plotting
+    output_qzv = "./output/{}_qemistree.qzv".format(qemistree_task)
     plot_cmd = ("qiime qemistree plot --i-tree ./output/{}_qemistree-pruned.qza "
                 "--i-feature-metadata ./output/{}_classified-feature-data.qza "
                 "--i-grouped-table ./output/{}_grouped-merged-feature-table.qza "
                 "--p-category '{}' --p-ms2-label {} --p-parent-mz {} --p-normalize-features {} "
-                "--o-visualization ./output/{}_qemistree.qzv"
+                "--o-visualization {}"
                 ).format(qemistree_task, qemistree_task, qemistree_task, plot_col,  
-                         ms2_label, parent_mz, normalize_features, qemistree_task)
-    os.system(plot_cmd)   
+                         ms2_label, parent_mz, normalize_features, output_qzv)
+    os.system(plot_cmd)
 
+    # Opening the file
+    itol_url = ""
+    with ZipFile(output_qzv) as myzip:
+        for name in myzip.namelist():
+            if "index.html" in name:
+                content_text = myzip.read(name)
+                soup = BeautifulSoup(content_text, 'html.parser')
+                itol_url = soup.h1.a.get("href")
+    
+    return html.A(html.Button('View iToL'),href=itol_url, target="_blank"), 
+        html.A(html.Button('Download qzv'),href="/download/{}".format(qemistree_task))
+
+
+@server.route("/download/<task>")
+def download(task):
+    """Serve a file from the upload directory."""
+    return send_from_directory("./output", os.path.basename(task) + "_qemistree.qzv", as_attachment=True)
 
 if __name__ == "__main__":
     app.run_server(debug=True, port=5000, host="0.0.0.0")

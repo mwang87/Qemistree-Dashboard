@@ -11,5 +11,17 @@ services:
     - "6544:5000"
     networks:
       - default
+      - nginx-net
+    environment:
+      VIRTUAL_HOST: qemistree.ucsd.edu
+      VIRTUAL_PORT: 6544
+      LETSENCRYPT_HOST: qemistree.ucsd.edu
+      LETSENCRYPT_EMAIL: miw023@ucsd.edu
     restart: unless-stopped
     command: /app/run_server.sh
+
+
+networks:
+  nginx-net:
+    external:
+      name: nginx-net
