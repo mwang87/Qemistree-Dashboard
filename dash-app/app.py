@@ -59,7 +59,7 @@ app.layout = html.Div(
                     {'label': 'Yes', 'value' : 'True'},
                     {'label': 'No', 'value' : 'False'},
                 ],
-                value='True'
+                value='False'
            ),
         html.Label('Label unannotated features by parent m/z:'),
         dcc.RadioItems(id='parent-mz',
@@ -79,15 +79,15 @@ app.layout = html.Div(
            ),
         html.Label('Sample metadata column to make barplots:'),
         dcc.Input(id='group-samples-col', type='text', value='filename'),
-        html.Div(id='plot-output'),
         html.Div(id='plot-download'),
-        html.Div(id='plot-qiime2')
+        html.Div(id='plot-qiime2'),
+        html.Div(id='plot-output')
     ]
 )
 
 # This function will rerun at any 
 @app.callback(
-    [Output('plot-output', 'children'), Output('plot-download', 'children'), Output('plot-qiime2', 'children')],
+    [Output('plot-download', 'children'), Output('plot-qiime2', 'children'), Output('plot-output', 'children')],
     [Input('qemistree-task', 'value'), 
     Input('prune-col', 'value'), 
     Input("plot-col", "value"), 
@@ -170,9 +170,9 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
     import urllib.parse
     qiime2_view_url = "https://view.qiime2.org/?src={}".format(urllib.parse.quote_plus(cors_url))
     
-    return html.A(html.Button('View iToL'),href=itol_url, target="_blank"), \
-        html.A(html.Button('Download qzv'),href="/download/{}".format(qemistree_task)), \
-        html.A(html.Button('View Qiime2 Viewer'),href=qiime2_view_url, target="_blank")
+    return html.A(html.Button('Download qzv'),href="/download/{}".format(qemistree_task)), \
+        html.A(html.Button('View Qiime2 Viewer'),href=qiime2_view_url, target="_blank"), \
+        html.Iframe(src=itol_url, height="800px", width="1200px")
 
 @server.route("/download/<task>")
 def download(task):
