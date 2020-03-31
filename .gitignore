@@ -129,3 +129,5 @@ dmypy.json
 .pyre/
 test/.DS_Store
 .DS_Store
+
+dash-app/output

@@ -80,13 +80,14 @@ app.layout = html.Div(
         html.Label('Sample metadata column to make barplots:'),
         dcc.Input(id='group-samples-col', type='text', value='filename'),
         html.Div(id='plot-output'),
-        html.Div(id='plot-download')
+        html.Div(id='plot-download'),
+        html.Div(id='plot-qiime2')
     ]
 )
 
 # This function will rerun at any 
 @app.callback(
-    [Output('plot-output', 'children'), Output('plot-download', 'children')],
+    [Output('plot-output', 'children'), Output('plot-download', 'children'), Output('plot-qiime2', 'children')],
     [Input('qemistree-task', 'value'), 
     Input('prune-col', 'value'), 
     Input("plot-col", "value"), 
@@ -164,9 +165,14 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
                 soup = BeautifulSoup(content_text, 'html.parser')
                 itol_url = soup.h1.a.get("href")
     
-    return html.A(html.Button('View iToL'),href=itol_url, target="_blank"), 
-        html.A(html.Button('Download qzv'),href="/download/{}".format(qemistree_task))
-
+    qemistree_qzv_source_url = "https://qemistree.ucsd.edu/download/{}".format(qemistree_task)
+    cors_url = "https://cors-anywhere.herokuapp.com/{}".format(qemistree_qzv_source_url)
+    import urllib.parse
+    qiime2_view_url = "https://view.qiime2.org/?src={}".format(urllib.parse.quote_plus(cors_url))
+    
+    return html.A(html.Button('View iToL'),href=itol_url, target="_blank"), \
+        html.A(html.Button('Download qzv'),href="/download/{}".format(qemistree_task)), \
+        html.A(html.Button('View Qiime2 Viewer'),href=qiime2_view_url, target="_blank")
 
 @server.route("/download/<task>")
 def download(task):
