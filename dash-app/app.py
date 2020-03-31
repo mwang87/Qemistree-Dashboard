@@ -8,6 +8,7 @@ import os
 from zipfile import ZipFile
 from flask import Flask, send_from_directory
 from bs4 import BeautifulSoup
+import urllib.parse
 
 import pandas as pd
 from skbio import TreeNode
@@ -104,8 +105,9 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
     # Metadata File
     output_filename = './output/{}_metadata.tsv'.format(qemistree_task)
     metadata = requests.get(url +  '&file=metadata_table/&block=main')
-    with open(output_filename, 'wb') as output_file:
-        output_file.write(metadata.content)
+    if metadata.status_code == 200:
+        with open(output_filename, 'wb') as output_file:
+            output_file.write(metadata.content)
 
     # hashed feature table
     output_filename = './output/{}_merged-feature-table.qza'.format(qemistree_task)
@@ -120,7 +122,6 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
     tree = requests.get(url+tree)
     with open(output_filename, 'wb') as qza:
         qza.write(tree.content)
-    # tree = Artifact.load(output_filename).view(TreeNode)
 
     # feature data with classyfire taxonomy
     output_filename = './output/{}_classified-feature-data.qza'.format(qemistree_task)
@@ -128,7 +129,6 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
     fdata = requests.get(url+fdata)
     with open(output_filename, 'wb') as qza:
         qza.write(fdata.content)
-    # fdata = Artifact.load(output_filename).view(pd.DataFrame)
 
     # tree pruning
     prune_cmd = ("qiime qemistree prune-hierarchy --i-feature-data ./output/{}_classified-feature-data.qza "
@@ -137,22 +137,31 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
                 ).format(qemistree_task, qemistree_task, prune_col, qemistree_task)
     os.system(prune_cmd)
     
-    # feature table grouping
-    group_cmd = ("qiime feature-table group --i-table ./output/{}_merged-feature-table.qza "
-                 "--p-axis 'sample' --m-metadata-file ./output/{}_metadata.tsv "
-                 "--m-metadata-column '{}' --p-mode 'mean-ceiling' "
-                 "--o-grouped-table ./output/{}_grouped-merged-feature-table.qza"
-                ).format(qemistree_task, qemistree_task, group_samples_col, qemistree_task)
-    os.system(group_cmd)
+    if os.path.isfile('./output/{}_metadata.tsv'.format(qemistree_task)):
+        metadata_path = './output/{}_metadata.tsv'.format(qemistree_task):
+    else:
+        metadata_path = None
+    
+    if metadata_path:
+        # feature table grouping
+        group_cmd = ("qiime feature-table group --i-table ./output/{}_merged-feature-table.qza "
+                    "--p-axis 'sample' --m-metadata-file {} "
+                    "--m-metadata-column '{}' --p-mode 'mean-ceiling' "
+                    "--o-grouped-table ./output/{}_grouped-merged-feature-table.qza"
+                    ).format(qemistree_task, metadata_path, group_samples_col, qemistree_task)
+        os.system(group_cmd)
+        group_table_path = './output/{}_grouped-merged-feature-table.qza.tsv'.format(qemistree_task)
+    else:
+        group_table_path = None
     
     # qemistree plotting
     output_qzv = "./output/{}_qemistree.qzv".format(qemistree_task)
     plot_cmd = ("qiime qemistree plot --i-tree ./output/{}_qemistree-pruned.qza "
                 "--i-feature-metadata ./output/{}_classified-feature-data.qza "
-                "--i-grouped-table ./output/{}_grouped-merged-feature-table.qza "
+                "--i-grouped-table {} "
                 "--p-category '{}' --p-ms2-label {} --p-parent-mz {} --p-normalize-features {} "
                 "--o-visualization {}"
-                ).format(qemistree_task, qemistree_task, qemistree_task, plot_col,  
+                ).format(qemistree_task, qemistree_task, grouped_table_path, plot_col,  
                          ms2_label, parent_mz, normalize_features, output_qzv)
     os.system(plot_cmd)
 
@@ -168,7 +177,6 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
     
     qemistree_qzv_source_url = "https://qemistree.ucsd.edu/download/{}".format(qemistree_task)
     cors_url = "https://cors-anywhere.herokuapp.com/{}".format(qemistree_qzv_source_url)
-    import urllib.parse
     qiime2_view_url = "https://view.qiime2.org/?src={}".format(urllib.parse.quote_plus(cors_url))
     
     return html.A(html.Button('Download qzv'),href="/download/{}".format(qemistree_task)), \
