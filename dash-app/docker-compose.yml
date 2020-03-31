@@ -5,6 +5,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: qemistree-dash
+    volumes:
+      - ./output:/output:rw
     ports:
     - "6544:5000"
     networks:

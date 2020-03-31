@@ -35,7 +35,6 @@ app.layout = html.Div(
                 ],
                 value='class'
             ),
-        html.Div(id='prune-output'),
         html.Label('Select feature metadata column to label features:'),
         dcc.Dropdown(id='plot-col',
                 options=[
@@ -68,49 +67,45 @@ app.layout = html.Div(
 )
 
 @app.callback(
-    Output('prune-output', 'children'),
-    [Input('qemistree-task', 'value'), Input('prune-col', 'value')],
+    Output('plot-output', 'children'),
+    [Input('qemistree-task', 'value'), 
+    Input('prune-col', 'value'), 
+    Input("plot-col", "value"), 
+    Input("ms2-label", "value"),
+    Input("parent-mz", "value")],
 )
-def process_qemistree(qemistree_task, prune_col):
+def process_qemistree(qemistree_task, prune_col, plot_col, ms2_label, parent_mz):
     url = 'https://gnps.ucsd.edu/ProteoSAFe/DownloadResultFile?task=' + qemistree_task
-    # TODO: where should we save task outputs if at all
 
     # hashed feature table
+    output_filename = '/output/{}_merged-feature-table.qza'.format(qemistree_task)
     table = '&file=output_folder/merged-feature-table.qza&block=main'
     ftable = requests.get(url + table)
-    with open('merged-feature-table.qza', 'wb') as qza:
+    with open(output_filename, 'wb') as qza:
         qza.write(ftable.content)
-    ftable = Artifact.load('merged-feature-table.qza').view(pd.DataFrame)
+    ftable = Artifact.load(output_filename).view(pd.DataFrame)
 
     # full tree
+    output_filename = '/output/{}_qemistree.qza'.format(qemistree_task)
     tree = "&file=output_folder/qemistree.qza&block=main"
     tree = requests.get(url+tree)
-    with open("qemistree.qza", "wb") as qza:
+    with open(output_filename, "wb") as qza:
         qza.write(tree.content)
-    tree = Artifact.load('qemistree.qza').view(TreeNode)
+    tree = Artifact.load(output_filename).view(TreeNode)
 
     # feature data with classyfire taxonomy
+    output_filename = '/output/{}_classified-feature-data.qza'.format(qemistree_task)
     fdata = "&file=output_folder/classified-feature-data.qza&block=main"
     fdata = requests.get(url+fdata)
-    with open("classified-feature-data.qza", "wb") as qza:
+    with open(output_filename, "wb") as qza:
         qza.write(fdata.content)
-    fdata = Artifact.load('classified-feature-data.qza').view(pd.DataFrame)
+    fdata = Artifact.load(output_filename).view(pd.DataFrame)
 
     pruned_tree = prune_hierarchy(fdata, tree, prune_col)
     ntips = len([tip for tip in pruned_tree.tips()])
 
+    return 'The number of features after filtering qemistree: {}'.format(ntips)
 
-    return 'The number of features after filtering qemistree: %s' %ntips
-
-    @app.callback(
-        Output("plot-output", "children"),
-        [Input("plot-col", "value"), Input("ms2-label", "value"),
-         Input("parent-mz", "value")],
-    )
-    def update_output(plot_col, ms2_label, parent_mz):
-        # TODO figure out how to get sample metadata
-        # TODO call plot
-        return feature_col, ms2_label, parent_mz
 
 if __name__ == "__main__":
     app.run_server(debug=True, port=5000, host="0.0.0.0")
