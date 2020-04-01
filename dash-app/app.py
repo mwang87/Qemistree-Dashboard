@@ -24,6 +24,7 @@ server = app.server
 
 app.layout = html.Div(
     [
+        dcc.Location(id='url', refresh=False),
         html.H1(children='Qemistree Dashboard'),
         html.Div([
             html.Label('Enter Qemistree Task ID:'),
@@ -86,6 +87,15 @@ app.layout = html.Div(
     ]
 )
 
+# This enables parsing the URL to shove a task into the qemistree id
+@app.callback(Output('qemistree-task', 'value'),
+              [Input('url', 'pathname')])
+def display_page(pathname):
+    if len(pathname) > 1:
+        return pathname[1:]
+    else:
+        return "8fa3ab31a4e546539ae585e55d7c7139"
+
 # This function will rerun at any 
 @app.callback(
     [Output('plot-download', 'children'), Output('plot-qiime2', 'children'), Output('plot-output', 'children')],
@@ -138,7 +148,7 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
     os.system(prune_cmd)
     
     if os.path.isfile('./output/{}_metadata.tsv'.format(qemistree_task)):
-        metadata_path = './output/{}_metadata.tsv'.format(qemistree_task):
+        metadata_path = './output/{}_metadata.tsv'.format(qemistree_task)
     else:
         metadata_path = None
     
