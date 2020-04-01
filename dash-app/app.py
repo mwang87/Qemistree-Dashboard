@@ -152,6 +152,7 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
     else:
         metadata_path = None
     
+    group_table_path = None
     if metadata_path:
         # feature table grouping
         group_cmd = ("qiime feature-table group --i-table ./output/{}_merged-feature-table.qza "
@@ -160,7 +161,7 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
                     "--o-grouped-table ./output/{}_grouped-merged-feature-table.qza"
                     ).format(qemistree_task, metadata_path, group_samples_col, qemistree_task)
         os.system(group_cmd)
-        group_table_path = './output/{}_grouped-merged-feature-table.qza.tsv'.format(qemistree_task)
+        group_table_path = './output/{}_grouped-merged-feature-table.qza'.format(qemistree_task)
     else:
         group_table_path = None
     
@@ -171,7 +172,7 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
                 "--i-grouped-table {} "
                 "--p-category '{}' --p-ms2-label {} --p-parent-mz {} --p-normalize-features {} "
                 "--o-visualization {}"
-                ).format(qemistree_task, qemistree_task, grouped_table_path, plot_col,  
+                ).format(qemistree_task, qemistree_task, group_table_path, plot_col,  
                          ms2_label, parent_mz, normalize_features, output_qzv)
     os.system(plot_cmd)
 
