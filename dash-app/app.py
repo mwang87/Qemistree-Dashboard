@@ -28,7 +28,7 @@ app.layout = html.Div(
         html.H1(children='Qemistree Dashboard'),
         html.Div([
             html.Label('Enter Qemistree Task ID:'),
-        ], style=dict(display = 'inline-block')),
+            ], style=dict(display = 'inline-block')),
         dcc.Input(id='qemistree-task', type="text", value='8fa3ab31a4e546539ae585e55d7c7139'),
         html.Label('Select feature metadata column to filter qemistree:'),
         dcc.Dropdown(id='prune-col',
