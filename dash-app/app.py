@@ -26,6 +26,7 @@ app.layout = html.Div(
     [
         dcc.Location(id='url', refresh=False),
         html.H1(children='Qemistree Dashboard'),
+        html.Div(id='version', children="Version - Release_1"),
         html.Div([
             html.Label('Enter Qemistree Task ID:'),
             ], style=dict(display = 'inline-block')),
