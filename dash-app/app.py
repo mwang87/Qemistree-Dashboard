@@ -71,6 +71,8 @@ app.layout = html.Div(
                 ],
                 value='True'
            ),
+        html.Label('Sample metadata column to make barplots:'),
+        dcc.Input(id='group-samples-col', type='text', value='filename'),
         html.Label('Normalize feature abundances:'),
         dcc.RadioItems(id='normalize-features',
                 options=[
@@ -79,8 +81,6 @@ app.layout = html.Div(
                 ],
                 value='True'
            ),
-        html.Label('Sample metadata column to make barplots:'),
-        dcc.Input(id='group-samples-col', type='text', value='filename'),
         html.Div(id='plot-download'),
         html.Div(id='plot-qiime2'),
         html.Div(id='plot-output')
@@ -167,13 +167,21 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
     
     # qemistree plotting
     output_qzv = "./output/{}_qemistree.qzv".format(qemistree_task)
-    plot_cmd = ("qiime qemistree plot --i-tree ./output/{}_qemistree-pruned.qza "
-                "--i-feature-metadata ./output/{}_classified-feature-data.qza "
-                "--i-grouped-table {} "
-                "--p-category '{}' --p-ms2-label {} --p-parent-mz {} --p-normalize-features {} "
-                "--o-visualization {}"
-                ).format(qemistree_task, qemistree_task, group_table_path, plot_col,  
-                         ms2_label, parent_mz, normalize_features, output_qzv)
+    if group_table_path:
+        plot_cmd = ("qiime qemistree plot --i-tree ./output/{}_qemistree-pruned.qza "
+                    "--i-feature-metadata ./output/{}_classified-feature-data.qza "
+                    "--i-grouped-table {} "
+                    "--p-category '{}' --p-ms2-label {} --p-parent-mz {} --p-normalize-features {} "
+                    "--o-visualization {}"
+                    ).format(qemistree_task, qemistree_task, group_table_path, plot_col,
+                             ms2_label, parent_mz, normalize_features, output_qzv)
+    else:
+        plot_cmd = ("qiime qemistree plot --i-tree ./output/{}_qemistree-pruned.qza "
+                    "--i-feature-metadata ./output/{}_classified-feature-data.qza "
+                    "--p-category '{}' --p-ms2-label {} --p-parent-mz {} --p-normalize-features {} "
+                    "--o-visualization {}"
+                    ).format(qemistree_task, qemistree_task, plot_col,
+                             ms2_label, parent_mz, normalize_features, output_qzv)
     os.system(plot_cmd)
 
     # Opening the file
