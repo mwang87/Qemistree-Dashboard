@@ -28,7 +28,7 @@ app.layout = html.Div(
         html.H1(children='Qemistree Dashboard'),
         html.Div([
             html.Label('Enter Qemistree Task ID:'),
-        ], style={'display': 'inline-block'}),
+        ], style=dict(display = 'inline-block')),
         dcc.Input(id='qemistree-task', type="text", value='8fa3ab31a4e546539ae585e55d7c7139'),
         html.Label('Select feature metadata column to filter qemistree:'),
         dcc.Dropdown(id='prune-col',
@@ -42,7 +42,8 @@ app.layout = html.Div(
                     {'label': 'Subclass', 'value' : 'subclass'},
                     {'label': 'Direct Parent', 'value' : 'direct_parent'}
                 ],
-                value='class'
+                value='class',
+                style = dict(width = '40%', display = 'inline-block'),
             ),
         html.Label('Select feature metadata column to label features:'),
         dcc.Dropdown(id='plot-col',
@@ -53,7 +54,8 @@ app.layout = html.Div(
                     {'label': 'Subclass', 'value' : 'subclass'},
                     {'label': 'Direct Parent', 'value' : 'direct_parent'}
                 ],
-                value='class'
+                value='class',
+                style = dict(width = '40%', display = 'inline-block'),
             ),
         html.Label('Label features by MS2 library match when available:'),
         dcc.RadioItems(id='ms2-label',
