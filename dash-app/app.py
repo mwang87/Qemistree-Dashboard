@@ -2,7 +2,7 @@
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import q2_qemistree
 import os
 from zipfile import ZipFile
@@ -84,6 +84,8 @@ app.layout = html.Div(
                 ],
                 value='True'
            ),
+        html.Button('Submit', id='button'),
+        html.Div(id='compute-details'),
         html.Div(id='plot-download'),
         html.Div(id='plot-qiime2'),
         html.Div(id='plot-output')
@@ -101,20 +103,21 @@ def display_page(pathname):
 
 # This function will rerun at any 
 @app.callback(
-    [Output('plot-download', 'children'), Output('plot-qiime2', 'children'), Output('plot-output', 'children')],
-    [Input('qemistree-task', 'value'), 
-    Input('prune-col', 'value'), 
-    Input("plot-col", "value"), 
-    Input("ms2-label", "value"),
-    Input("parent-mz", "value"),
-    Input("normalize-features", "value"),
-    Input("group-samples-col", "value")],
+    [Output('compute-details', 'children'), Output('plot-download', 'children'), Output('plot-qiime2', 'children'), Output('plot-output', 'children')],
+    [Input('button', 'n_clicks')],
+    state = [State('qemistree-task', 'value'),
+    State("prune-col", 'value'),
+    State("plot-col", "value"),
+    State("ms2-label", "value"),
+    State("parent-mz", "value"),
+    State("normalize-features", "value"),
+    State("group-samples-col", "value")],
 )
-def process_qemistree(qemistree_task, prune_col, plot_col, 
+def process_qemistree(n_clicks, qemistree_task, prune_col, plot_col,
                       ms2_label, parent_mz, normalize_features, 
                       group_samples_col):
     url = 'https://gnps.ucsd.edu/ProteoSAFe/DownloadResultFile?task=' + qemistree_task
-
+    
     # Metadata File
     output_filename = './output/{}_metadata.tsv'.format(qemistree_task)
     metadata = requests.get(url +  '&file=metadata_table/&block=main')
@@ -145,8 +148,8 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
 
     # tree pruning
     prune_cmd = ("qiime qemistree prune-hierarchy --i-feature-data ./output/{}_classified-feature-data.qza "
-                 "--i-tree ./output/{}_qemistree.qza --p-column {} "
-                 "--o-pruned-tree ./output/{}_qemistree-pruned.qza"
+                "--i-tree ./output/{}_qemistree.qza --p-column {} "
+                "--o-pruned-tree ./output/{}_qemistree-pruned.qza"
                 ).format(qemistree_task, qemistree_task, prune_col, qemistree_task)
     os.system(prune_cmd)
     
@@ -177,14 +180,14 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
                     "--p-category '{}' --p-ms2-label {} --p-parent-mz {} --p-normalize-features {} "
                     "--o-visualization {}"
                     ).format(qemistree_task, qemistree_task, group_table_path, plot_col,
-                             ms2_label, parent_mz, normalize_features, output_qzv)
+                            ms2_label, parent_mz, normalize_features, output_qzv)
     else:
         plot_cmd = ("qiime qemistree plot --i-tree ./output/{}_qemistree-pruned.qza "
                     "--i-feature-metadata ./output/{}_classified-feature-data.qza "
                     "--p-category '{}' --p-ms2-label {} --p-parent-mz {} --p-normalize-features {} "
                     "--o-visualization {}"
                     ).format(qemistree_task, qemistree_task, plot_col,
-                             ms2_label, parent_mz, normalize_features, output_qzv)
+                            ms2_label, parent_mz, normalize_features, output_qzv)
     os.system(plot_cmd)
 
     # Opening the file
@@ -200,10 +203,12 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
     qemistree_qzv_source_url = "https://qemistree.ucsd.edu/download/{}".format(qemistree_task)
     cors_url = "https://cors-anywhere.herokuapp.com/{}".format(qemistree_qzv_source_url)
     qiime2_view_url = "https://view.qiime2.org/?src={}".format(urllib.parse.quote_plus(cors_url))
-    
-    return html.A(html.Button('Download qzv'),href="/download/{}".format(qemistree_task)), \
-        html.A(html.Button('View Qiime2 Viewer'),href=qiime2_view_url, target="_blank"), \
-        html.Iframe(src=itol_url, height="800px", width="1200px")
+        
+          
+    return "A qemistree visualization for the task ID: {}. Features were filtered by '{}' & labeled by '{}'".format(qemistree_task, prune_col, plot_col), \
+            html.A(html.Button('Download qzv'),href="/download/{}".format(qemistree_task)), \
+            html.A(html.Button('View Qiime2 Viewer'),href=qiime2_view_url, target="_blank"), \
+            html.Iframe(src=itol_url, height="800px", width="1200px")
 
 @server.route("/download/<task>")
 def download(task):
