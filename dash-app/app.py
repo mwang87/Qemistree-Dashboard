@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 import dash
 import dash_core_components as dcc
+import dash_bootstrap_components as dbc
 import dash_html_components as html
-from dash.dependencies import Input, Output
+import dash_table
+import plotly.express as px
+from dash.dependencies import Input, Output, State
 import q2_qemistree
 import os
 from zipfile import ZipFile
@@ -18,19 +21,34 @@ import requests
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 server = Flask(__name__)
-app = dash.Dash(__name__, server=server, external_stylesheets=external_stylesheets)
+app = dash.Dash(__name__, server=server, external_stylesheets=[dbc.themes.COSMO])
 server = app.server
 
+NAVBAR = dbc.Navbar(
+    children=[
+        dbc.NavbarBrand(
+            html.Img(src="https://gnps-cytoscape.ucsd.edu/static/img/GNPS_logo.png", width="120px"),
+            href="https://ccms-ucsd.github.io/GNPSDocumentation/qemistree/"
+        ),
+        dbc.Nav(
+            [
+                dbc.NavItem(dbc.NavLink("Qemistree Dashboard - Release_1", href="#")),
+            ],
+        navbar=True)
+    ],
+    color="light",
+    dark=False,
+    sticky="top",
+)
 
-app.layout = html.Div(
-    [
+DASHBOARD = [
         dcc.Location(id='url', refresh=False),
-        html.H1(children='Qemistree Dashboard'),
-        html.Div(id='version', children="Version - Release_1"),
         html.Div([
-            html.Label('Enter Qemistree Task ID:'),
-            ], style=dict(display = 'inline-block')),
-        dcc.Input(id='qemistree-task', type="text", value='8fa3ab31a4e546539ae585e55d7c7139'),
+            html.Label('Qemistree Task:'),
+            ], style = {'display': 'inline-block'}),
+        dcc.Input(id='qemistree-task', placeholder = 'Enter task ID..', type="text", 
+                  value='8fa3ab31a4e546539ae585e55d7c7139',
+                  style = {'display': 'inline-block', 'margin': '1px'}),
         html.Label('Select feature metadata column to filter qemistree:'),
         dcc.Dropdown(id='prune-col',
                 options=[
@@ -44,7 +62,8 @@ app.layout = html.Div(
                     {'label': 'Direct Parent', 'value' : 'direct_parent'}
                 ],
                 value='class',
-                style = dict(width = '40%', display = 'inline-block'),
+                style = {'display': 'inline-block',
+                        'margin': '1px'},
             ),
         html.Label('Select feature metadata column to label features:'),
         dcc.Dropdown(id='plot-col',
@@ -56,7 +75,8 @@ app.layout = html.Div(
                     {'label': 'Direct Parent', 'value' : 'direct_parent'}
                 ],
                 value='class',
-                style = dict(width = '40%', display = 'inline-block'),
+                style = {'display': 'inline-block',
+                        'margin': '1px'},
             ),
         html.Label('Label features by MS2 library match when available:'),
         dcc.RadioItems(id='ms2-label',
@@ -64,7 +84,9 @@ app.layout = html.Div(
                     {'label': 'Yes', 'value' : 'True'},
                     {'label': 'No', 'value' : 'False'},
                 ],
-                value='False'
+                value='False',
+                labelStyle={'display': 'inline-block',
+                            'margin': '5px'}
            ),
         html.Label('Label unannotated features by parent m/z:'),
         dcc.RadioItems(id='parent-mz',
@@ -72,23 +94,40 @@ app.layout = html.Div(
                     {'label': 'Yes', 'value' : 'True'},
                     {'label': 'No', 'value' : 'False'},
                 ],
-                value='True'
+                value='True',
+                labelStyle={'display': 'inline-block',
+                            'margin': '5px'}
            ),
-        html.Label('Sample metadata column to make barplots:'),
-        dcc.Input(id='group-samples-col', type='text', value='filename'),
+        html.Label('Sample metadata column to make barplots (Optional):'),
+        dcc.Input(id='group-samples-col', placeholder='Enter sample metadata column..', type='text', 
+                  value='filename', style = {'display': 'inline-block', 'margin': '1px'}),
         html.Label('Normalize feature abundances:'),
         dcc.RadioItems(id='normalize-features',
                 options=[
                     {'label': 'Yes', 'value' : 'True'},
                     {'label': 'No', 'value' : 'False'},
                 ],
-                value='True'
+                value='True',
+                labelStyle={'display': 'inline-block',
+                            'margin': '5px'}
            ),
-        html.Div(id='plot-download'),
-        html.Div(id='plot-qiime2'),
-        html.Div(id='plot-output')
+        html.Button('Submit', id='button'),
+        dcc.Loading(
+            children = [html.Div(id='compute-details'),
+            html.Div(id='plot-download'),
+            html.Div(id='plot-qiime2'),
+            html.Div(id='plot-output')]
+        )
     ]
+
+BODY = dbc.Container(
+    [
+        dbc.Row([dbc.Col(dbc.Card(DASHBOARD)),], style={"marginTop": 30}),
+    ],
+    className="mt-12",
 )
+
+app.layout = html.Div(children=[NAVBAR, BODY])
 
 # This enables parsing the URL to shove a task into the qemistree id
 @app.callback(Output('qemistree-task', 'value'),
@@ -99,22 +138,24 @@ def display_page(pathname):
     else:
         return "8fa3ab31a4e546539ae585e55d7c7139"
 
-# This function will rerun at any 
+# This function will rerun when submit button is clicked
 @app.callback(
-    [Output('plot-download', 'children'), Output('plot-qiime2', 'children'), Output('plot-output', 'children')],
-    [Input('qemistree-task', 'value'), 
-    Input('prune-col', 'value'), 
-    Input("plot-col", "value"), 
-    Input("ms2-label", "value"),
-    Input("parent-mz", "value"),
-    Input("normalize-features", "value"),
-    Input("group-samples-col", "value")],
+    [Output('compute-details', 'children'), Output('plot-download', 'children'), 
+    Output('plot-qiime2', 'children'), Output('plot-output', 'children')],
+    [Input('button', 'n_clicks')],
+    state = [State('qemistree-task', 'value'),
+    State("prune-col", 'value'),
+    State("plot-col", "value"),
+    State("ms2-label", "value"),
+    State("parent-mz", "value"),
+    State("normalize-features", "value"),
+    State("group-samples-col", "value")],
 )
-def process_qemistree(qemistree_task, prune_col, plot_col, 
+def process_qemistree(n_clicks, qemistree_task, prune_col, plot_col,
                       ms2_label, parent_mz, normalize_features, 
                       group_samples_col):
     url = 'https://gnps.ucsd.edu/ProteoSAFe/DownloadResultFile?task=' + qemistree_task
-
+    
     # Metadata File
     output_filename = './output/{}_metadata.tsv'.format(qemistree_task)
     metadata = requests.get(url +  '&file=metadata_table/&block=main')
@@ -145,8 +186,8 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
 
     # tree pruning
     prune_cmd = ("qiime qemistree prune-hierarchy --i-feature-data ./output/{}_classified-feature-data.qza "
-                 "--i-tree ./output/{}_qemistree.qza --p-column {} "
-                 "--o-pruned-tree ./output/{}_qemistree-pruned.qza"
+                "--i-tree ./output/{}_qemistree.qza --p-column {} "
+                "--o-pruned-tree ./output/{}_qemistree-pruned.qza"
                 ).format(qemistree_task, qemistree_task, prune_col, qemistree_task)
     os.system(prune_cmd)
     
@@ -177,14 +218,14 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
                     "--p-category '{}' --p-ms2-label {} --p-parent-mz {} --p-normalize-features {} "
                     "--o-visualization {}"
                     ).format(qemistree_task, qemistree_task, group_table_path, plot_col,
-                             ms2_label, parent_mz, normalize_features, output_qzv)
+                            ms2_label, parent_mz, normalize_features, output_qzv)
     else:
         plot_cmd = ("qiime qemistree plot --i-tree ./output/{}_qemistree-pruned.qza "
                     "--i-feature-metadata ./output/{}_classified-feature-data.qza "
                     "--p-category '{}' --p-ms2-label {} --p-parent-mz {} --p-normalize-features {} "
                     "--o-visualization {}"
                     ).format(qemistree_task, qemistree_task, plot_col,
-                             ms2_label, parent_mz, normalize_features, output_qzv)
+                            ms2_label, parent_mz, normalize_features, output_qzv)
     os.system(plot_cmd)
 
     # Opening the file
@@ -200,10 +241,12 @@ def process_qemistree(qemistree_task, prune_col, plot_col,
     qemistree_qzv_source_url = "https://qemistree.ucsd.edu/download/{}".format(qemistree_task)
     cors_url = "https://cors-anywhere.herokuapp.com/{}".format(qemistree_qzv_source_url)
     qiime2_view_url = "https://view.qiime2.org/?src={}".format(urllib.parse.quote_plus(cors_url))
-    
-    return html.A(html.Button('Download qzv'),href="/download/{}".format(qemistree_task)), \
-        html.A(html.Button('View Qiime2 Viewer'),href=qiime2_view_url, target="_blank"), \
-        html.Iframe(src=itol_url, height="800px", width="1200px")
+        
+          
+    return "A qemistree visualization for the task ID: {}. Features are filtered by '{}' & labeled by '{}'".format(qemistree_task, prune_col, plot_col), \
+            html.A(html.Button('Download qzv'),href="/download/{}".format(qemistree_task)), \
+            html.A(html.Button('View Qiime2 Viewer'),href=qiime2_view_url, target="_blank"), \
+            html.Iframe(src=itol_url, height="800px", width="100%")
 
 @server.route("/download/<task>")
 def download(task):

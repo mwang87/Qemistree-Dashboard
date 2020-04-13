@@ -9,6 +9,7 @@ RUN conda install -n qiime2-2019.10-qemistree -c conda-forge dash
 RUN /bin/bash -c ". activate qiime2-2019.10-qemistree && \
     pip install git+https://github.com/biocore/q2-qemistree"
 RUN conda install -n qiime2-2019.10-qemistree -c anaconda beautifulsoup4
+RUN conda install -n qiime2-2019.10-qemistree -c conda-forge dash-bootstrap-components
 
 #RUN /bin/bash -c ". activate qiime2-2019.10-qemistree && \
 #    pip install https://github.com/biocore/q2-qemistree/archive/2020.1.2.tar.gz"
