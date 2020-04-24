@@ -47,8 +47,8 @@ DASHBOARD = [
             html.Label('Qemistree Task:'),
             ], style = {'display': 'inline-block'}),
         dcc.Input(id='qemistree-task', placeholder = 'Enter task ID..', type="text", 
-                  value='8fa3ab31a4e546539ae585e55d7c7139',
                   style = {'display': 'inline-block', 'margin': '1px'}),
+        html.Button('Populate Example Task', id='demo-button'),
         html.Label('Select feature metadata column to filter qemistree:'),
         dcc.Dropdown(id='prune-col',
                 options=[
@@ -131,12 +131,17 @@ app.layout = html.Div(children=[NAVBAR, BODY])
 
 # This enables parsing the URL to shove a task into the qemistree id
 @app.callback(Output('qemistree-task', 'value'),
-              [Input('url', 'pathname')])
-def display_page(pathname):
+              [Input('url', 'pathname'), Input('demo-button', 'n_clicks')])
+def display_page(pathname, n_clicks):
+    # If button was clicked
+    if n_clicks is not None and n_clicks > 0:
+        return "8fa3ab31a4e546539ae585e55d7c7139"
+
+    # Otherwise, lets use the url
     if len(pathname) > 1:
         return pathname[1:]
     else:
-        return "8fa3ab31a4e546539ae585e55d7c7139"
+        return dash.no_update
 
 # This function will rerun when submit button is clicked
 @app.callback(
@@ -154,6 +159,12 @@ def display_page(pathname):
 def process_qemistree(n_clicks, qemistree_task, prune_col, plot_col,
                       ms2_label, parent_mz, normalize_features, 
                       group_samples_col):
+
+    if qemistree_task is None:
+        return [dash.no_update, dash.no_update, dash.no_update, dash.no_update]
+    
+    # Check if the qemistree task on GNPS is actually bogus, but you know. 
+
     url = 'https://gnps.ucsd.edu/ProteoSAFe/DownloadResultFile?task=' + qemistree_task
     
     # Metadata File
