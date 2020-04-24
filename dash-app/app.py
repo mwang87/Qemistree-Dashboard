@@ -32,7 +32,7 @@ NAVBAR = dbc.Navbar(
         ),
         dbc.Nav(
             [
-                dbc.NavItem(dbc.NavLink("Qemistree Dashboard - Release_1", href="#")),
+                dbc.NavItem(dbc.NavLink("Qemistree Dashboard - Release 1.1", href="#")),
             ],
         navbar=True)
     ],
